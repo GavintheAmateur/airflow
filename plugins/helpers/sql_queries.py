@@ -52,6 +52,10 @@ class SqlQueries:
         location varchar,
         user_agent varchar)
     """)
+    user_table_drop = ("""drop table if exists users""")
+    song_table_drop = ("""drop table if exists songs""")
+    artist_table_drop = ("""drop table if exists artists""")
+    time_table_drop = ("""drop table if exists time""")
 
     user_table_create = ("""
         create table if not exists users
