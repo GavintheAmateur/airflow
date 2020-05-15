@@ -10,28 +10,31 @@ from plugins.operators import (CreateTablesOperator, StageToRedshiftOperator, Lo
 default_args = {
     'owner': 'gavin',
     'start_date': datetime(2020, 5, 5),
+    'retries': 3,
+    'retry_delay': datetime.timedelta(minutes=5),
+    'depends_on_past': False,
+    'email_on_retry': False,
+    'catchup':False
 }
 
 dag = DAG('sparkify_etl_dag_test',
           default_args=default_args,
           description='Load and transform data in Redshift with Airflow',
-          start_date= default_args['start_date']
+          start_date=default_args['start_date']
           # schedule_interval='0 * * * *',
-        )
+          )
 
+start_operator = DummyOperator(task_id='Start_execution', dag=dag)
 
-
-start_operator = DummyOperator(task_id='Start_execution',  dag=dag)
-
-create_tables = CreateTablesOperator(task_id='create_tables_if_not_exists',  dag=dag,    redshift_conn_id='redshift')
+create_tables = CreateTablesOperator(task_id='create_tables_if_not_exists', dag=dag, redshift_conn_id='redshift')
 
 stage_events_to_redshift = StageToRedshiftOperator(
     task_id='stage_events_to_redshift',
     dag=dag,
-    table = 'staging_events',
+    table='staging_events',
     redshift_conn_id='redshift',
-    aws_credentials_id = 'aws_credentials',
-    s3_bucket = 'udacity-dend',
+    aws_credentials_id='aws_credentials',
+    s3_bucket='udacity-dend',
     provide_context=True,
     s3_key='log_data/{execution_date.year}/{execution_date.month:02}/{ds}-events.json',
     region='us-west-2'  # for test, prod region is us-west-2
@@ -40,15 +43,14 @@ stage_events_to_redshift = StageToRedshiftOperator(
 stage_songs_to_redshift = StageToRedshiftOperator(
     task_id='stage_songs_to_redshift',
     dag=dag,
-    table = 'staging_songs',
+    table='staging_songs',
     redshift_conn_id='redshift',
-    aws_credentials_id = 'aws_credentials',
-    s3_bucket = 'udacity-dend',
+    aws_credentials_id='aws_credentials',
+    s3_bucket='udacity-dend',
     provide_context=True,
     s3_key='song_data',
-    region='us-west-2' #for test, prod region is us-west-2
+    region='us-west-2'  # for test, prod region is us-west-2
 )
-
 
 load_songplays_table = LoadFactOperator(
     task_id='Load_songplays_fact_table',
@@ -90,8 +92,7 @@ run_quality_checks = DataQualityOperator(
     dag=dag
 )
 
-end_operator = DummyOperator(task_id='Stop_execution',  dag=dag)
-
+end_operator = DummyOperator(task_id='Stop_execution', dag=dag)
 
 start_operator >> stage_events_to_redshift
 start_operator >> stage_songs_to_redshift
@@ -104,22 +105,8 @@ load_songplays_table >> load_song_dimension_table
 load_songplays_table >> load_artist_dimension_table
 load_songplays_table >> load_time_dimension_table
 
-load_user_dimension_table  >> run_quality_checks
-load_song_dimension_table  >> run_quality_checks
-load_artist_dimension_table  >> run_quality_checks
-load_time_dimension_table  >> run_quality_checks
+load_user_dimension_table >> run_quality_checks
+load_song_dimension_table >> run_quality_checks
+load_artist_dimension_table >> run_quality_checks
+load_time_dimension_table >> run_quality_checks
 run_quality_checks >> end_operator
-
-
-
-
-
-
-
-
-
-
-
-
-
-
